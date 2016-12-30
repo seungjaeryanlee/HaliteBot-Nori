@@ -92,6 +92,46 @@ namespace hlt{
             l = getLocation(l, direction);
             return contents[l.y][l.x];
         }
+
+        Location getLocation(Location l, int x, int y) {
+            if(x < 0) {
+                if(-x <= l.x) {
+                    l.x += x;
+                }
+                else {
+                    l.x += width-x;
+                }
+            }
+            else {
+                if(x < width - l.x) {
+                    l.x += x;
+                }
+                else {
+                    l.x -= width-x;
+                }
+
+            }
+
+            if(y < 0) {
+                if(-y <= l.y) {
+                    l.y += y;
+                }
+                else {
+                    l.y += width-y;
+                }
+            }
+            else {
+                if(y < width - l.y) {
+                    l.y += y;
+                }
+                else {
+                    l.y -= width-y;
+                }
+
+            }
+
+            return l;
+        }
     };
 
     struct Move{
