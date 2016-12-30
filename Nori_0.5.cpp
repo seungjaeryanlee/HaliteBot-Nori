@@ -62,7 +62,7 @@ int main() {
     unsigned char myID;
     hlt::GameMap presentMap;
     getInit(myID, presentMap);
-    sendInit("Nori 6");
+    sendInit("Nori 0.5");
 
     std::set<hlt::Move> moves;
     for(int i = 1; ; i++) {
@@ -76,26 +76,18 @@ int main() {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID) {
                     bool isMoved = false;
-                    bool isBorder = false;
 
-                    // If on border, wait until you can attack
-                    for(Direction dir : CARDINALS) {
-                        const hlt::Site neighborSite = presentMap.getSite({b, a}, dir);
-                        if (neighborSite.owner != myID) {
-                            isBorder = true;
-                            if(neighborSite.strength < presentMap.getSite({b, a}).strength) {
-                                isMoved = true;
-                                moves.insert({{b, a}, dir});
-                                break;
-                            }
+                    // If there is a adjacent block that has less strength then the block, attack
+                    for (int dir : CARDINALS) {
+                        if(presentMap.getSite({b, a}, dir).owner != myID &&
+                           presentMap.getSite({b, a}, dir).strength < presentMap.getSite({b, a}).strength) {
+                            isMoved = true;
+                            moves.insert({{b, a}, (unsigned char)dir});
+                            break;
                         }
                     }
-                    if(!isMoved && isBorder) {
-                        isMoved = true;
-                        moves.insert({{b, a}, STILL});
-                    }
 
-                    // If below certain ratio of strength/production, don't move
+                    // If below ratio of strength/production, don't move
                     if(!isMoved && presentMap.getSite({b, a}).strength < presentMap.getSite({b, a}).production * MIN_RATIO) {
                         isMoved = true;
                         moves.insert({{b, a}, STILL});

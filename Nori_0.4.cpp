@@ -37,7 +37,7 @@ int main() {
     unsigned char myID;
     hlt::GameMap presentMap;
     getInit(myID, presentMap);
-    sendInit("NoriBot");
+    sendInit("Nori 0.4");
 
     std::set<hlt::Move> moves;
     for(int i = 1; ; i++) {
@@ -50,20 +50,36 @@ int main() {
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID) {
+                    bool isMoved = false;
+
+                    // If there is a adjacent block that has less strength then the block, attack
+                    for (int dir : CARDINALS) {
+                        if(presentMap.getSite({b, a}, dir).owner != myID &&
+                           presentMap.getSite({b, a}, dir).strength < presentMap.getSite({b, a}).strength) {
+                            isMoved = true;
+                            moves.insert({{b, a}, (unsigned char)dir});
+                            break;
+                        }
+                    }
+
                     // If below ratio of strength/production, don't move
-                    if(presentMap.getSite({b, a}).strength < presentMap.getSite({b, a}).production * MIN_RATIO) {
+                    if(!isMoved && presentMap.getSite({b, a}).strength < presentMap.getSite({b, a}).production * MIN_RATIO) {
+                        isMoved = true;
                         moves.insert({{b, a}, STILL});
                         continue;
                     }
 
                     // 1/2 chance to stay still, 1/8 chance to move each direction
-                    if(rand() % 2) {
+                    if(!isMoved && rand() % 2) {
+                        isMoved = true;
                         moves.insert({{b, a}, STILL});
                         continue;
                     }
-                    else {
-                        moves.insert({ { b, a }, (unsigned char)(rand() % 4 + 1) });
-                        continue;
+
+                    // Default option
+                    // Only move NORTH or WEST to make blocks spread outside
+                    if(!isMoved) {
+                        moves.insert({ { b, a }, (unsigned char)((bool)(rand()%2) ? NORTH : WEST) });
                     }
                 }
             }

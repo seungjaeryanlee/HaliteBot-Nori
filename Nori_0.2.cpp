@@ -9,7 +9,27 @@
 #include "hlt.hpp"
 #include "networking.hpp"
 
+const int MIN_RATIO = 5;
+
+int findStrength(hlt::GameMap& map, const unsigned char ID) {
+    int strength = 0;
+
+    for(unsigned short a = 0; a < map.height; a++) {
+        for(unsigned short b = 0; b < map.width; b++) {
+            if (map.getSite({b, a}).owner == ID) {
+                strength += map.getSite({b, a}).strength;
+            }
+        }
+    }
+
+    return strength;
+}
+
 int main() {
+
+    std::ofstream log;
+    log.open("nori.log");
+
     srand(time(NULL));
 
     std::cout.sync_with_stdio(0);
@@ -17,19 +37,21 @@ int main() {
     unsigned char myID;
     hlt::GameMap presentMap;
     getInit(myID, presentMap);
-    sendInit("NoriBot");
+    sendInit("Nori 0.2");
 
     std::set<hlt::Move> moves;
-    while(true) {
+    for(int i = 1; ; i++) {
         moves.clear();
+
+        log << "Turn " << i << ": " << findStrength(presentMap, myID) << " strength" << std::endl;
 
         getFrame(presentMap);
 
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID) {
-                    // If at zero strength, don't move
-                    if(presentMap.getSite({ b, a}).strength == 0) {
+                    // If below ratio of strength/production, don't move
+                    if(presentMap.getSite({b, a}).strength < presentMap.getSite({b, a}).production * MIN_RATIO) {
                         moves.insert({{b, a}, STILL});
                         continue;
                     }
@@ -47,8 +69,9 @@ int main() {
             }
         }
 
-        sendFrame(moves);
+        sendFrame(moves);   
     }
 
+    log.close();
     return 0;
 }

@@ -93,7 +93,7 @@ int main() {
     unsigned char myID;
     hlt::GameMap presentMap;
     getInit(myID, presentMap);
-    sendInit("Nori 7");
+    sendInit("Nori 1.0");
 
     std::set<hlt::Move> moves;
     for(int i = 1; ; i++) {
