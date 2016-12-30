@@ -13,22 +13,22 @@ const int MIN_RATIO = 5;
 
 typedef unsigned char Direction;
 
-Direction findNearestDirection(hlt::GameMap& map, hlt::Location loc, const unsigned char ID) {
+Direction findNearestDirection(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     int maxDistance = (map.width < map.height) ? map.width/2 : map.height/2;
     Direction bestDir = NORTH;
 
-    for(Direction d : CARDINALS) {
+    for(Direction dir : CARDINALS) {
         unsigned short distance = 0;
         hlt::Location current = loc;
-        hlt::Site site = map.getSite(current, d);
+        hlt::Site site = map.getSite(current, dir);
         while(site.owner == ID && distance < maxDistance) {
             distance++;
-            current = map.getLocation(current, d);
+            current = map.getLocation(current, dir);
             site = map.getSite(current);
         }
 
         if(distance < maxDistance) {
-            bestDir = d;
+            bestDir = dir;
             maxDistance = distance;
         }
     }
@@ -72,7 +72,6 @@ hlt::Move getMove(hlt::GameMap& map, const hlt::Location& loc, const unsigned ch
         return {loc, STILL};
     }
 
-
     // 1/2 chance to stay still
     if(rand() % 2) {
         return {loc, STILL};
@@ -84,13 +83,13 @@ hlt::Move getMove(hlt::GameMap& map, const hlt::Location& loc, const unsigned ch
 
 int main() {
 
+    srand(time(NULL));
+
     std::ofstream log;
     log.open("nori.log");
 
-
     std::cout.sync_with_stdio(0);
 
-    srand(time(NULL));
     unsigned char myID;
     hlt::GameMap presentMap;
     getInit(myID, presentMap);
@@ -101,7 +100,6 @@ int main() {
         moves.clear();
 
         getFrame(presentMap);
-        // log << "Turn " << i << ": " << findStrength(presentMap, myID) << " strength" << std::endl;
 
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
