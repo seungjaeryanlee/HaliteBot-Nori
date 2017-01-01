@@ -2,3 +2,5 @@
 *.log
 *.o
 *.zip
+/ML/logs
+/ML/replays
