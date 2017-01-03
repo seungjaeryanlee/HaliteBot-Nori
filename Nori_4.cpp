@@ -1,5 +1,3 @@
-// FIXME FIXME Index errors on moveDirList
-
 #include <fstream>
 #include <string>
 
@@ -194,7 +192,6 @@ Direction getAssistMoveDir(hlt::GameMap& map, std::vector<std::vector<Direction>
                 
                 // Make sure neighbor doesn't move
                 moveDirList[neighbor.y][neighbor.x] = STILL;
-                moveDirList[loc.y][loc.x] = dir;
                 return dir;
             }
         }
@@ -250,7 +247,7 @@ int main() {
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID) {
-                    moveDirList[b][a] = getAttackMoveDir(presentMap, {b, a}, myID);
+                    moveDirList[a][b] = getAttackMoveDir(presentMap, {b, a}, myID);
                 }
             }
         }
@@ -258,8 +255,8 @@ int main() {
         // Fill all combo attack moves
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
-                if (presentMap.getSite({ b, a }).owner == myID && moveDirList[b][a] == INVALID) {
-                    moveDirList[b][a] = getComboAttackMoveDir(presentMap, {b, a}, myID);
+                if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
+                    moveDirList[a][b] = getComboAttackMoveDir(presentMap, {b, a}, myID);
                 }
             }
         }
@@ -267,8 +264,8 @@ int main() {
         // Fill all waiting moves
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
-                if (presentMap.getSite({ b, a }).owner == myID && moveDirList[b][a] == INVALID) {
-                    moveDirList[b][a] = getWaitOneTurnDir(presentMap, {b, a}, myID);
+                if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
+                    moveDirList[a][b] = getWaitOneTurnDir(presentMap, {b, a}, myID);
                 }
             }
         }
@@ -276,8 +273,8 @@ int main() {
         // Fill all assist moves
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
-                if (presentMap.getSite({ b, a }).owner == myID && moveDirList[b][a] == INVALID) {
-                    moveDirList[b][a] = getAssistMoveDir(presentMap, moveDirList, {b, a}, myID);
+                if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
+                    moveDirList[a][b] = getAssistMoveDir(presentMap, moveDirList, {b, a}, myID);
                     //printMove(log, {{b, a}, dir});
                 }
             }
@@ -287,8 +284,8 @@ int main() {
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID) {
-                    if(moveDirList[b][a] != INVALID) {
-                        moves.insert({{b, a}, moveDirList[b][a]});
+                    if(moveDirList[a][b] != INVALID) {
+                        moves.insert({{b, a}, moveDirList[a][b]});
                     }
                     else {
                         moves.insert({{b, a}, getDefaultMoveDir(presentMap, {b, a}, myID)});

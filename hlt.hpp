@@ -16,7 +16,7 @@ const int CARDINALS[] = {NORTH, EAST, SOUTH, WEST};
 
 namespace hlt{
     struct Location{
-        unsigned short x, y;
+        unsigned short x, y; // width, height
     };
     static bool operator<(const Location& l1, const Location& l2) {
         return ((l1.x + l1.y)*((unsigned int)l1.x + l1.y + 1) / 2) + l1.y < ((l2.x + l2.y)*((unsigned int)l2.x + l2.y + 1) / 2) + l2.y;
