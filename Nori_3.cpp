@@ -66,6 +66,7 @@ bool isStrongEnough(hlt::GameMap& map, const hlt::Location loc, const int streng
 //     return maxDistance;
 // }
 
+// Find direction with the smallest distance to the border
 Direction findNearestBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     int maxDistance = (map.width < map.height) ? map.width/2 : map.height/2;
     Direction bestDir = NORTH;
@@ -90,6 +91,7 @@ Direction findNearestBorder(hlt::GameMap& map, const hlt::Location& loc, const u
     return bestDir;
 }
 
+// Get how many enemy blocks will be attacked by moving to loc
 int getDamageRatio(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     int damageRatio = 0;
 
@@ -106,7 +108,7 @@ int getDamageRatio(hlt::GameMap& map, const hlt::Location& loc, const unsigned c
     return damageRatio;
 }
 
-
+// Get move to make
 hlt::Move getMove(hlt::GameMap& map, std::vector<std::vector<bool>>& hasMoved, const hlt::Location& loc, const unsigned char ID) {
     bool canAttack = false;
     int bestDamageRatio = 0;
@@ -140,6 +142,9 @@ hlt::Move getMove(hlt::GameMap& map, std::vector<std::vector<bool>>& hasMoved, c
         hasMoved[loc.y][loc.x] = true;
         return {loc, bestAttackDir};
     }
+    if(isStrongEnough(map, loc, map.getSite(loc).strength + map.getSite(loc).production, ID)) {
+        return {loc, STILL};
+    }
 
     // If it can assist an attack, assist!
     if(map.getSite(loc).strength != 0) {
@@ -149,8 +154,10 @@ hlt::Move getMove(hlt::GameMap& map, std::vector<std::vector<bool>>& hasMoved, c
             if(map.getSite(neighbor).owner == ID 
                 && isBorder(map, neighbor, ID) 
                 && !hasMoved[neighbor.y][neighbor.x] 
-                && !isStrongEnough(map, neighbor, map.getSite(neighbor).strength, ID)
-                && isStrongEnough(map, neighbor, map.getSite(neighbor).strength + map.getSite(loc).strength, ID)) {
+                && !isStrongEnough(map, neighbor, map.getSite(neighbor).strength + map.getSite(neighbor).production, ID)
+                && isStrongEnough(map, neighbor, map.getSite(neighbor).strength + map.getSite(neighbor).production + map.getSite(loc).strength, ID)) {
+                // && !isStrongEnough(map, neighbor, map.getSite(neighbor).strength, ID)
+                // && isStrongEnough(map, neighbor, map.getSite(neighbor).strength + map.getSite(loc).strength, ID)) {
                 // Unite with the neighbor border
                 hasMoved[loc.y][loc.x] = true;
                 // Neighbor should not move
