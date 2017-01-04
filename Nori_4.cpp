@@ -151,9 +151,10 @@ Direction getAttackMoveDir(hlt::GameMap& map, const hlt::Location& loc, const un
                 if(bestDamageRatio < damageRatio) {
                     bestDamageRatio = damageRatio;
                     bestAttackDir = dir;
+                    bestProduction = production;
                 }
                 // If same damage, choose site with better production
-                if(bestDamageRatio == damageRatio && bestProduction < production) {
+                else if(bestDamageRatio == damageRatio && bestProduction < production) {
                     bestProduction = production;
                     bestAttackDir = dir;
                 }
@@ -197,6 +198,10 @@ Direction getAssistMoveDir(hlt::GameMap& map, std::vector<std::vector<Direction>
         }
     }
 
+    return INVALID;
+}
+
+Direction getMultiAssistMoveDir(hlt::GameMap& map, std::vector<std::vector<Direction>>& moveDirList, const hlt::Location& loc, const unsigned char ID) {
     return INVALID;
 }
 
@@ -275,6 +280,16 @@ int main() {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
                     moveDirList[a][b] = getAssistMoveDir(presentMap, moveDirList, {b, a}, myID);
+                    //printMove(log, {{b, a}, dir});
+                }
+            }
+        }
+
+        // Fill all multi-assist moves
+        for(unsigned short a = 0; a < presentMap.height; a++) {
+            for(unsigned short b = 0; b < presentMap.width; b++) {
+                if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
+                    moveDirList[a][b] = getMultiAssistMoveDir(presentMap, moveDirList, {b, a}, myID);
                     //printMove(log, {{b, a}, dir});
                 }
             }
