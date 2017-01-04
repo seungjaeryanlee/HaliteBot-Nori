@@ -92,27 +92,33 @@ bool isStrongEnough(hlt::GameMap& map, const hlt::Location loc, const int streng
 
 // Find direction with the smallest distance to the border
 Direction findNearestBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
-    int maxDistance = (map.width < map.height) ? map.width/2 : map.height/2;
+    int minDistance = (map.width < map.height) ? map.width/2 : map.height/2;
+    
     Direction bestDir = NORTH;
 
     for(Direction dir : CARDINALS) {
 
-        unsigned short distance = 0;
+        int distance = 0;
         hlt::Location current = loc;
         hlt::Site site = map.getSite(current, dir);
-        while(site.owner == ID && distance < maxDistance) {
-            distance++;
+
+        // If on border, distance would be 0.
+        for(distance = 0; distance < minDistance; distance++) {
+            if(site.owner != ID) { break; }
             current = map.getLocation(current, dir);
             site = map.getSite(current);
         }
 
-        if(distance < maxDistance) {
+        if(distance < minDistance) {
             bestDir = dir;
-            maxDistance = distance;
+            minDistance = distance;
         }
     }
 
     return bestDir;
+
+    // TODO: If bestDir was never changed, do something else?
+    // TODO: Stay still or find different border if oversaturation can happen?
 }
 
 // Get how many enemy blocks will be attacked by moving to loc
