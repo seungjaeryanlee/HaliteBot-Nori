@@ -10,7 +10,7 @@ count2 = 0;
 
 # improve time with threading https://pymotw.com/3/threading/
 for i in range(matchCount):
-	p = subprocess.Popen("./NvN.sh", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	p = subprocess.Popen("./simpleNvN.sh", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	out, err = p.communicate()
 	lines = out.splitlines()
 	

@@ -240,6 +240,14 @@ void addMultiAssistMove(hlt::GameMap& map, std::vector<std::vector<Direction>>& 
         }
 
         if(isStrongEnough(map, loc, maxAssistStrength + map.getSite(loc).strength, ID)) {
+            // int lostProduction = 0;
+            // for(Direction dir : CARDINALS) {
+            //     if(canAssist[dir]) {
+            //         hlt::Site neighborSite = map.getSite(loc, dir);
+            //         lostProduction += neighborSite.production;
+            //     }
+            // }
+
             // TODO: Find best assists (to minimize lost production)
             for(Direction dir : CARDINALS) {
                 if(canAssist[dir]) {
@@ -247,7 +255,7 @@ void addMultiAssistMove(hlt::GameMap& map, std::vector<std::vector<Direction>>& 
                     moveDirList[neighbor.y][neighbor.x] = opposite(dir);
                 }
             }
-
+            moveDirList[loc.y][loc.x] = STILL;
             return;
         }
     }
