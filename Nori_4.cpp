@@ -3,29 +3,11 @@
 
 #include "hlt.hpp"
 #include "networking.hpp"
+#include "nori.h"
 
 #define INVALID 5
 
 const int MIN_RATIO = 5;
-
-typedef unsigned char Direction;
-
-Direction opposite(Direction dir) {
-    switch(dir) {
-        case NORTH:
-            return SOUTH;
-            break;
-        case SOUTH:
-            return NORTH;
-            break;
-        case WEST:
-            return EAST;
-            break;
-        case EAST:
-            return WEST;
-            break;    
-    }
-}
 
 // bool willSaturate(hlt::GameMap& map, std::vector<std::vector<int>>& strengths, const hlt::Move& move) {
 //     hlt::Site init = map.getSite(move.loc);
@@ -35,77 +17,6 @@ Direction opposite(Direction dir) {
 //     else { return false; }
 // }
 
-// void updateStrengths(hlt::GameMap& map, std::vector<std::vector<int>>& strengths, const hlt::Move& move) {
-//     hlt::Site init = map.getSite(move.loc);
-//     hlt::Location dest = map.getLocation(move.loc, move.dir);
-
-//     strengths[dest.y][dest.x] += init.strength;
-// }
-
-// int distanceFromEnemy(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
-//     int maxDistance = (map.width < map.height) ? map.width/2 : map.height/2;
-
-//     for(Direction dir : CARDINALS) {
-//         unsigned short distance = 0;
-//         hlt::Location current = loc;
-//         hlt::Site site = map.getSite(current, dir);
-//         while(site.owner == ID && distance < maxDistance) {
-//             distance++;
-//             current = map.getLocation(current, dir);
-//             site = map.getSite(current);
-//         }
-
-//         if(distance < maxDistance) {
-//             maxDistance = distance;
-//         }
-//     }
-
-//     return maxDistance;
-// }
-
-void printMove(std::ofstream& out, hlt::Move move) {
-    out << "(x,y): (" << move.loc.x << "," << move.loc.y << ") ";
-    switch(move.dir) {
-        case STILL:
-            out << "STILL" << std::endl;
-            break;
-        case NORTH:
-            out << "NORTH" << std::endl;
-            break;
-        case SOUTH:
-            out << "SOUTH" << std::endl;
-            break;
-        case EAST:
-            out << "EAST" << std::endl;
-            break;
-        case WEST:
-            out << "WEST" << std::endl;
-            break;
-    }
-}
-
-// Check if the block is a border block
-bool isBorder(hlt::GameMap& map, const hlt::Location loc, const unsigned char ID) {
-    for(Direction dir : CARDINALS) {
-        if(map.getSite(loc, dir).owner != ID) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-// Check whether given strength is enough for the block to attack something
-bool isStrongEnough(hlt::GameMap& map, const hlt::Location loc, const int strength, const unsigned char ID) {
-    for(Direction dir : CARDINALS) {
-        const hlt::Site neighbor = map.getSite(loc, dir);
-        if(neighbor.owner != ID && neighbor.strength <= strength ) {
-            return true;
-        }
-    }
-
-    return false;
-}
 
 // Find direction with the smallest distance to the border
 Direction findNearestBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
@@ -240,14 +151,6 @@ void addMultiAssistMove(hlt::GameMap& map, std::vector<std::vector<Direction>>& 
         }
 
         if(isStrongEnough(map, loc, maxAssistStrength + map.getSite(loc).strength, ID)) {
-            // int lostProduction = 0;
-            // for(Direction dir : CARDINALS) {
-            //     if(canAssist[dir]) {
-            //         hlt::Site neighborSite = map.getSite(loc, dir);
-            //         lostProduction += neighborSite.production;
-            //     }
-            // }
-
             // TODO: Find best assists (to minimize lost production)
             for(Direction dir : CARDINALS) {
                 if(canAssist[dir]) {
@@ -337,7 +240,6 @@ int main() {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
                     moveDirList[a][b] = getAssistMoveDir(presentMap, moveDirList, {b, a}, myID);
-                    //printMove(log, {{b, a}, dir});
                 }
             }
         }
@@ -348,7 +250,7 @@ int main() {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
                     addMultiAssistMove(presentMap, moveDirList, {b, a}, myID);
-                    //printMove(log, {{b, a}, dir});
+                    
                 }
             }
         }
@@ -359,9 +261,12 @@ int main() {
                 if (presentMap.getSite({ b, a }).owner == myID) {
                     if(moveDirList[a][b] != INVALID) {
                         moves.insert({{b, a}, moveDirList[a][b]});
+                        printMove(log, {{b, a}, moveDirList[a][b]});
                     }
                     else {
-                        moves.insert({{b, a}, getDefaultMoveDir(presentMap, {b, a}, myID)});
+                        Direction dir = getDefaultMoveDir(presentMap, {b, a}, myID);
+                        moves.insert({{b, a}, dir});
+                        printMove(log, {{b, a}, dir});
                     }
                 }
             }
