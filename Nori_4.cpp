@@ -9,15 +9,6 @@
 
 const int MIN_RATIO = 5;
 
-// bool willSaturate(hlt::GameMap& map, std::vector<std::vector<int>>& strengths, const hlt::Move& move) {
-//     hlt::Site init = map.getSite(move.loc);
-//     hlt::Location dest = map.getLocation(move.loc, move.dir);
-
-//     if(strengths[dest.y][dest.x] + init.strength > 255 + 50) { return true; }
-//     else { return false; }
-// }
-
-
 // Find direction with the smallest distance to the border
 Direction findNearestBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     int minDistance = (map.width < map.height) ? map.width/2 : map.height/2;
@@ -166,11 +157,12 @@ void addMultiAssistMove(hlt::GameMap& map, std::vector<std::vector<Direction>>& 
 
 Direction getDefaultMoveDir(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     // If it's too small, grow
-    if(map.getSite(loc).strength < map.getSite(loc).production * MIN_RATIO) {
+    // Equal in case that production = 0
+    if(map.getSite(loc).strength <= map.getSite(loc).production * MIN_RATIO) {
         return STILL;
     }
 
-    // If it's on border, check if moving to another border makes that border expandable
+    // If it's on border, stay still
     if(isBorder(map, loc, ID)) {
         return STILL;
     }
@@ -249,8 +241,7 @@ int main() {
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
-                    addMultiAssistMove(presentMap, moveDirList, {b, a}, myID);
-                    
+                    // addMultiAssistMove(presentMap, moveDirList, {b, a}, myID);
                 }
             }
         }
