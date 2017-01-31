@@ -10,6 +10,23 @@ const int MIN_RATIO = 5;
 
 typedef unsigned char Direction;
 
+Direction opposite(Direction dir) {
+    switch(dir) {
+        case NORTH:
+            return SOUTH;
+            break;
+        case SOUTH:
+            return NORTH;
+            break;
+        case WEST:
+            return EAST;
+            break;
+        case EAST:
+            return WEST;
+            break;    
+    }
+}
+
 // bool willSaturate(hlt::GameMap& map, std::vector<std::vector<int>>& strengths, const hlt::Move& move) {
 //     hlt::Site init = map.getSite(move.loc);
 //     hlt::Location dest = map.getLocation(move.loc, move.dir);
@@ -207,8 +224,33 @@ Direction getAssistMoveDir(hlt::GameMap& map, std::vector<std::vector<Direction>
     return INVALID;
 }
 
-Direction getMultiAssistMoveDir(hlt::GameMap& map, std::vector<std::vector<Direction>>& moveDirList, const hlt::Location& loc, const unsigned char ID) {
-    return INVALID;
+void addMultiAssistMove(hlt::GameMap& map, std::vector<std::vector<Direction>>& moveDirList, const hlt::Location& loc, const unsigned char ID) {
+
+    bool canAssist[5] = {false, false, false, false, false};
+    if(!isBorder(map, loc, ID)) { return; }
+
+    int maxAssistStrength = 0;
+    for(Direction dir : CARDINALS) {
+        hlt::Location neighbor = map.getLocation(loc, dir);
+        hlt::Site neighborSite = map.getSite(neighbor);
+
+        if(neighborSite.owner == ID && moveDirList[neighbor.y][neighbor.x] == INVALID && neighborSite.strength > 0) {
+            maxAssistStrength += neighborSite.strength;
+            canAssist[dir] = true;
+        }
+
+        if(isStrongEnough(map, loc, maxAssistStrength + map.getSite(loc).strength, ID)) {
+            // TODO: Find best assists (to minimize lost production)
+            for(Direction dir : CARDINALS) {
+                if(canAssist[dir]) {
+                    hlt::Location neighbor = map.getLocation(loc, dir);
+                    moveDirList[neighbor.y][neighbor.x] = opposite(dir);
+                }
+            }
+
+            return;
+        }
+    }
 }
 
 Direction getDefaultMoveDir(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
@@ -264,6 +306,7 @@ int main() {
         }
 
         // Fill all combo attack moves
+        // TODO: Don't combo attack if attack will happen
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
@@ -292,10 +335,11 @@ int main() {
         }
 
         // Fill all multi-assist moves
+        // TODO: Don't multi-assist if assist will happen
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
-                    moveDirList[a][b] = getMultiAssistMoveDir(presentMap, moveDirList, {b, a}, myID);
+                    addMultiAssistMove(presentMap, moveDirList, {b, a}, myID);
                     //printMove(log, {{b, a}, dir});
                 }
             }
