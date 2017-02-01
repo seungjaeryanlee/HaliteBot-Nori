@@ -56,7 +56,7 @@ bool isBorder(hlt::GameMap& map, const hlt::Location loc, const unsigned char ID
 bool isStrongEnough(hlt::GameMap& map, const hlt::Location loc, const int strength, const unsigned char ID) {
     for(Direction dir : CARDINALS) {
         const hlt::Site neighbor = map.getSite(loc, dir);
-        if(neighbor.owner != ID && neighbor.strength <= strength) {
+        if(neighbor.owner != ID && (neighbor.strength < strength || strength >= 255)) {
             return true;
         }
     }

@@ -4,7 +4,7 @@ CFLAGS = -std=c++11
 nori: Nori_1.0
 
 clean:
-	rm *.o *.hlt 1-*.log
+	rm *.o *.hlt 1-*.log 2-*.log
 
 Nori_4: 
 	$(CC) $(CFLAGS) Nori_4.cpp -o Nori_4.o
