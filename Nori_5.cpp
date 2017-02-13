@@ -39,7 +39,6 @@ int nearestBorderStrength(hlt::GameMap& map, const hlt::Location& loc, const uns
     // TODO: Stay still or find different border if oversaturation can happen?
 }
 
-
 int distanceToBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     int minDistance = (map.width < map.height) ? map.width/2 : map.height/2;
 
@@ -62,6 +61,24 @@ int distanceToBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned
     }
 
     return minDistance;
+}
+
+// Returns true if bot is close to enemy blocks
+bool checkFighting(hlt::GameMap& map, const unsigned char ID) {
+	int minDistance = 255; 
+	for(unsigned short a = 0; a < map.height; a++) {
+        for(unsigned short b = 0; b < map.width; b++) {
+            if (map.getSite({ b, a }).owner == ID) {
+            	int distance = distanceToBorder(map, {b,a}, ID);
+            	if(minDistance > distance) {
+            		minDistance = distance;
+            	}
+            }
+        }
+    }
+
+    if(minDistance < 3) { return true; }
+    else { return false; }
 }
 
 // Find direction with the smallest distance to the border
@@ -149,8 +166,42 @@ Direction getAttackMoveDir(hlt::GameMap& map, std::vector<std::vector<bool>>& is
     return INVALID;
 }
 
-Direction getComboAttackMoveDir(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
-    return INVALID;
+void getComboAttackMoveDir(hlt::GameMap& map, std::vector<std::vector<bool>>& isTarget, std::vector<std::vector<Direction>>& moveDirList, const hlt::Location& loc, const unsigned char ID) {
+    // Check it can be attacked
+    bool isEnemyBorder = false;
+	for(Direction dir : CARDINALS) {
+		if(map.getSite(loc, dir).owner == ID) { isEnemyBorder = true; break; }
+	}
+	if(!isEnemyBorder) { return; }
+
+    // Check it's not already targetted
+    if(isTarget[loc.y][loc.x]) { return; }
+
+
+    bool canAttack[5] = {false, false, false, false, false};
+
+    int maxAttackStrength = 0;
+    for(Direction dir : CARDINALS) {
+        hlt::Location neighbor = map.getLocation(loc, dir);
+        hlt::Site neighborSite = map.getSite(neighbor);
+
+        if(neighborSite.owner == ID && moveDirList[neighbor.y][neighbor.x] == INVALID && neighborSite.strength > 0) {
+            maxAttackStrength += neighborSite.strength;
+            canAttack[dir] = true;
+        }
+
+        if(maxAttackStrength >= map.getSite(loc).strength) {
+            // TODO: Find best attacks (to minimize lost production)
+            for(Direction dir : CARDINALS) {
+                if(canAttack[dir]) {
+                    hlt::Location neighbor = map.getLocation(loc, dir);
+                    moveDirList[neighbor.y][neighbor.x] = opposite(dir);
+                }
+            }
+            isTarget[loc.y][loc.x] = true;
+            return;
+        }
+    }
 }
 
 Direction getWaitOneTurnDir(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
@@ -223,24 +274,11 @@ Direction getDefaultMoveDir(hlt::GameMap& map, const hlt::Location& loc, const u
         return STILL;
     }
 
-    // if(map.getSite(loc).strength * distanceToBorder(map, loc, ID) > 255) {
-    //     return findNearestBorder(map, loc, ID);
-    // }
+	if(map.getSite(loc).strength * distanceToBorder(map, loc, ID) > nearestBorderStrength(map, loc, ID)) {
+		return findNearestBorder(map, loc, ID);
+	}
 
-    // // If not too large, 1/2 chance to stay still
-    // if(map.getSite(loc).strength < 100 && rand() % 2) {
-    //     return STILL;
-    // }
-
-    // // Move towards border
-    // return findNearestBorder(map, loc, ID);
-
-    if(map.getSite(loc).strength * distanceToBorder(map, loc, ID) > nearestBorderStrength(map, loc, ID)) {
-        return findNearestBorder(map, loc, ID);
-    }
-
-    return STILL;
-
+ 	return STILL;
 }
 
 int main() {
@@ -258,6 +296,8 @@ int main() {
     sendInit("Nori 5");
 
     std::set<hlt::Move> moves;
+    bool isFighting = false;
+
 
     for(int i = 1; ; i++) {
         moves.clear();
@@ -265,6 +305,8 @@ int main() {
         getFrame(presentMap);
         std::vector<std::vector<Direction>> moveDirList = std::vector<std::vector<Direction>>(presentMap.height, std::vector<Direction>(presentMap.width, INVALID));
         std::vector<std::vector<bool>> isTarget = std::vector<std::vector<bool>>(presentMap.height, std::vector<bool>(presentMap.width, false));
+
+        if(!isFighting) { isFighting = checkFighting(presentMap, myID); }
 
         log << "Turn " << i << std::endl;
 
@@ -281,8 +323,8 @@ int main() {
         // // TODO: Don't combo attack if attack will happen
         // for(unsigned short a = 0; a < presentMap.height; a++) {
         //     for(unsigned short b = 0; b < presentMap.width; b++) {
-        //         if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
-        //             moveDirList[a][b] = getComboAttackMoveDir(presentMap, {b, a}, myID);
+        //         if (presentMap.getSite({ b, a }).owner != myID && moveDirList[a][b] == INVALID) {
+        //             getComboAttackMoveDir(presentMap, isTarget, moveDirList, {b, a}, myID);
         //         }
         //     }
         // }
