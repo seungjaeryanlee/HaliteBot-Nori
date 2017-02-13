@@ -9,6 +9,7 @@
 
 int MIN_RATIO = 5;
 
+// Returns the least strength of a block adjacent to loc that the bot can attack
 int nearestBorderStrength(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     int minDistance = (map.width < map.height) ? map.width/2 : map.height/2;
 
@@ -34,11 +35,9 @@ int nearestBorderStrength(hlt::GameMap& map, const hlt::Location& loc, const uns
     }
 
     return strength;
-
-    // TODO: If bestDir was never changed, do something else?
-    // TODO: Stay still or find different border if oversaturation can happen?
 }
 
+// Returns minimum distance to the border block from loc
 int distanceToBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     int minDistance = (map.width < map.height) ? map.width/2 : map.height/2;
 
@@ -61,24 +60,6 @@ int distanceToBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned
     }
 
     return minDistance;
-}
-
-// Returns true if bot is close to enemy blocks
-bool checkFighting(hlt::GameMap& map, const unsigned char ID) {
-	int minDistance = 255; 
-	for(unsigned short a = 0; a < map.height; a++) {
-        for(unsigned short b = 0; b < map.width; b++) {
-            if (map.getSite({ b, a }).owner == ID) {
-            	int distance = distanceToBorder(map, {b,a}, ID);
-            	if(minDistance > distance) {
-            		minDistance = distance;
-            	}
-            }
-        }
-    }
-
-    if(minDistance < 3) { return true; }
-    else { return false; }
 }
 
 // Find direction with the smallest distance to the border
@@ -129,6 +110,7 @@ int getDamageRatio(hlt::GameMap& map, const hlt::Location& loc, const unsigned c
     return damageRatio;
 }
 
+// Return direction of attack the block at loc should perform or return INVALID
 Direction getAttackMoveDir(hlt::GameMap& map, std::vector<std::vector<bool>>& isTarget, const hlt::Location& loc, const unsigned char ID) {
     bool canAttack = false;
     int bestDamageRatio = 0;
@@ -166,44 +148,7 @@ Direction getAttackMoveDir(hlt::GameMap& map, std::vector<std::vector<bool>>& is
     return INVALID;
 }
 
-void getComboAttackMoveDir(hlt::GameMap& map, std::vector<std::vector<bool>>& isTarget, std::vector<std::vector<Direction>>& moveDirList, const hlt::Location& loc, const unsigned char ID) {
-    // Check it can be attacked
-    bool isEnemyBorder = false;
-	for(Direction dir : CARDINALS) {
-		if(map.getSite(loc, dir).owner == ID) { isEnemyBorder = true; break; }
-	}
-	if(!isEnemyBorder) { return; }
-
-    // Check it's not already targetted
-    if(isTarget[loc.y][loc.x]) { return; }
-
-
-    bool canAttack[5] = {false, false, false, false, false};
-
-    int maxAttackStrength = 0;
-    for(Direction dir : CARDINALS) {
-        hlt::Location neighbor = map.getLocation(loc, dir);
-        hlt::Site neighborSite = map.getSite(neighbor);
-
-        if(neighborSite.owner == ID && moveDirList[neighbor.y][neighbor.x] == INVALID && neighborSite.strength > 0) {
-            maxAttackStrength += neighborSite.strength;
-            canAttack[dir] = true;
-        }
-
-        if(maxAttackStrength >= map.getSite(loc).strength) {
-            // TODO: Find best attacks (to minimize lost production)
-            for(Direction dir : CARDINALS) {
-                if(canAttack[dir]) {
-                    hlt::Location neighbor = map.getLocation(loc, dir);
-                    moveDirList[neighbor.y][neighbor.x] = opposite(dir);
-                }
-            }
-            isTarget[loc.y][loc.x] = true;
-            return;
-        }
-    }
-}
-
+// Return STILL if waiting one turn allows attacking, otherwise returns INVALID
 Direction getWaitOneTurnDir(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     if(isStrongEnough(map, loc, map.getSite(loc).strength + map.getSite(loc).production, ID)) {
         return STILL;
@@ -211,6 +156,7 @@ Direction getWaitOneTurnDir(hlt::GameMap& map, const hlt::Location& loc, const u
     return INVALID;
 }
 
+// Return direction of assist the block at loc should perform or return INVALID
 Direction getAssistMoveDir(hlt::GameMap& map, std::vector<std::vector<Direction>>& moveDirList, const hlt::Location& loc, const unsigned char ID) {
 
     if(map.getSite(loc).strength != 0) {
@@ -233,35 +179,7 @@ Direction getAssistMoveDir(hlt::GameMap& map, std::vector<std::vector<Direction>
     return INVALID;
 }
 
-void addMultiAssistMove(hlt::GameMap& map, std::vector<std::vector<Direction>>& moveDirList, const hlt::Location& loc, const unsigned char ID) {
-
-    bool canAssist[5] = {false, false, false, false, false};
-    if(!isBorder(map, loc, ID)) { return; }
-
-    int maxAssistStrength = 0;
-    for(Direction dir : CARDINALS) {
-        hlt::Location neighbor = map.getLocation(loc, dir);
-        hlt::Site neighborSite = map.getSite(neighbor);
-
-        if(neighborSite.owner == ID && moveDirList[neighbor.y][neighbor.x] == INVALID && neighborSite.strength > 0) {
-            maxAssistStrength += neighborSite.strength;
-            canAssist[dir] = true;
-        }
-
-        if(isStrongEnough(map, loc, maxAssistStrength + map.getSite(loc).strength, ID)) {
-            // TODO: Find best assists (to minimize lost production)
-            for(Direction dir : CARDINALS) {
-                if(canAssist[dir]) {
-                    hlt::Location neighbor = map.getLocation(loc, dir);
-                    moveDirList[neighbor.y][neighbor.x] = opposite(dir);
-                }
-            }
-            moveDirList[loc.y][loc.x] = STILL;
-            return;
-        }
-    }
-}
-
+// Return default action the block loc should perform
 Direction getDefaultMoveDir(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     // If it's too small, grow
     // Equal in case that production = 0
@@ -296,8 +214,6 @@ int main() {
     sendInit("Nori 5");
 
     std::set<hlt::Move> moves;
-    bool isFighting = false;
-
 
     for(int i = 1; ; i++) {
         moves.clear();
@@ -305,8 +221,6 @@ int main() {
         getFrame(presentMap);
         std::vector<std::vector<Direction>> moveDirList = std::vector<std::vector<Direction>>(presentMap.height, std::vector<Direction>(presentMap.width, INVALID));
         std::vector<std::vector<bool>> isTarget = std::vector<std::vector<bool>>(presentMap.height, std::vector<bool>(presentMap.width, false));
-
-        if(!isFighting) { isFighting = checkFighting(presentMap, myID); }
 
         log << "Turn " << i << std::endl;
 
@@ -318,16 +232,6 @@ int main() {
                 }
             }
         }
-
-        // // Fill all combo attack moves
-        // // TODO: Don't combo attack if attack will happen
-        // for(unsigned short a = 0; a < presentMap.height; a++) {
-        //     for(unsigned short b = 0; b < presentMap.width; b++) {
-        //         if (presentMap.getSite({ b, a }).owner != myID && moveDirList[a][b] == INVALID) {
-        //             getComboAttackMoveDir(presentMap, isTarget, moveDirList, {b, a}, myID);
-        //         }
-        //     }
-        // }
 
         // Fill all waiting moves
         for(unsigned short a = 0; a < presentMap.height; a++) {
@@ -346,16 +250,6 @@ int main() {
                 }
             }
         }
-
-        // // Fill all multi-assist moves
-        // // TODO: Don't multi-assist if assist will happen
-        // for(unsigned short a = 0; a < presentMap.height; a++) {
-        //     for(unsigned short b = 0; b < presentMap.width; b++) {
-        //         if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
-        //             addMultiAssistMove(presentMap, moveDirList, {b, a}, myID);
-        //         }
-        //     }
-        // }
 
         // Submit moves, using Default moves if a block is not specified
         for(unsigned short a = 0; a < presentMap.height; a++) {
