@@ -18,10 +18,10 @@ for i in range(matchCount):
 	if 'Player #2' in line: # sanity check
 		if 'rank #1' in line:
 			count2 += 1
-			print(str(i+1) + ": Player 2 won.")
+			print(str(i+1) + ": Player 2 won. (" + str(count1) + "-" + str(count2) + ")")
 		else:
 			count1 += 1
-			print(str(i+1) + ": Player 1 won.")
+			print(str(i+1) + ": Player 1 won. (" + str(count1) + "-" + str(count2) + ")")
 
 print("Player 1 won " + str(count1) + " times.")
 print("Player 2 won " + str(count2) + " times.")
