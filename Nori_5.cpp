@@ -7,12 +7,67 @@
 
 #define INVALID 5
 
-const int MIN_RATIO = 5;
+int MIN_RATIO = 5;
+
+int nearestBorderStrength(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
+    int minDistance = (map.width < map.height) ? map.width/2 : map.height/2;
+
+    int strength = 0;
+
+    for(Direction dir : CARDINALS) {
+
+        int distance = 0;
+        hlt::Location current = loc;
+        hlt::Site site = map.getSite(current, dir);
+
+        // If on border, distance would be 0.
+        for(distance = 0; distance < minDistance; distance++) {
+            if(site.owner != ID) { break; }
+            current = map.getLocation(current, dir);
+            site = map.getSite(current);
+        }
+
+        if(distance < minDistance) {
+            minDistance = distance;
+            strength = site.strength;
+        }
+    }
+
+    return strength;
+
+    // TODO: If bestDir was never changed, do something else?
+    // TODO: Stay still or find different border if oversaturation can happen?
+}
+
+
+int distanceToBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
+    int minDistance = (map.width < map.height) ? map.width/2 : map.height/2;
+
+    for(Direction dir : CARDINALS) {
+
+        int distance = 0;
+        hlt::Location current = loc;
+        hlt::Site site = map.getSite(current, dir);
+
+        // If on border, distance would be 0.
+        for(distance = 0; distance < minDistance; distance++) {
+            if(site.owner != ID) { break; }
+            current = map.getLocation(current, dir);
+            site = map.getSite(current);
+        }
+
+        if(distance < minDistance) {
+            minDistance = distance;
+        }
+    }
+
+    return minDistance;
+}
 
 // Find direction with the smallest distance to the border
 Direction findNearestBorder(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
     int minDistance = (map.width < map.height) ? map.width/2 : map.height/2;
-    
+
     Direction bestDir = NORTH;
 
     for(Direction dir : CARDINALS) {
@@ -57,7 +112,7 @@ int getDamageRatio(hlt::GameMap& map, const hlt::Location& loc, const unsigned c
     return damageRatio;
 }
 
-Direction getAttackMoveDir(hlt::GameMap& map, const hlt::Location& loc, const unsigned char ID) {
+Direction getAttackMoveDir(hlt::GameMap& map, std::vector<std::vector<bool>>& isTarget, const hlt::Location& loc, const unsigned char ID) {
     bool canAttack = false;
     int bestDamageRatio = 0;
     int bestProduction = 0;
@@ -66,7 +121,7 @@ Direction getAttackMoveDir(hlt::GameMap& map, const hlt::Location& loc, const un
     for(Direction dir : CARDINALS) {
         
         const hlt::Site neighborSite = map.getSite(loc, dir);
-        if (neighborSite.owner != ID) {
+        if (neighborSite.owner != ID && !isTarget[map.getLocation(loc, dir).y][map.getLocation(loc, dir).x]) {
             if(neighborSite.strength < map.getSite(loc).strength) {
 
                 int damageRatio = getDamageRatio(map, map.getLocation(loc, dir), ID);
@@ -87,6 +142,7 @@ Direction getAttackMoveDir(hlt::GameMap& map, const hlt::Location& loc, const un
         }
     }
     if(canAttack) {
+    	isTarget[map.getLocation(loc, bestAttackDir).y][map.getLocation(loc, bestAttackDir).x] = true;
         return bestAttackDir;
     }
 
@@ -167,13 +223,24 @@ Direction getDefaultMoveDir(hlt::GameMap& map, const hlt::Location& loc, const u
         return STILL;
     }
 
-    // If not too large, 1/2 chance to stay still
-    if(map.getSite(loc).strength < 100 && rand() % 2) {
-        return STILL;
+    // if(map.getSite(loc).strength * distanceToBorder(map, loc, ID) > 255) {
+    //     return findNearestBorder(map, loc, ID);
+    // }
+
+    // // If not too large, 1/2 chance to stay still
+    // if(map.getSite(loc).strength < 100 && rand() % 2) {
+    //     return STILL;
+    // }
+
+    // // Move towards border
+    // return findNearestBorder(map, loc, ID);
+
+    if(map.getSite(loc).strength * distanceToBorder(map, loc, ID) > nearestBorderStrength(map, loc, ID)) {
+        return findNearestBorder(map, loc, ID);
     }
 
-    // Move towards border
-    return findNearestBorder(map, loc, ID);
+    return STILL;
+
 }
 
 int main() {
@@ -191,11 +258,13 @@ int main() {
     sendInit("Nori 5");
 
     std::set<hlt::Move> moves;
+
     for(int i = 1; ; i++) {
         moves.clear();
 
         getFrame(presentMap);
         std::vector<std::vector<Direction>> moveDirList = std::vector<std::vector<Direction>>(presentMap.height, std::vector<Direction>(presentMap.width, INVALID));
+        std::vector<std::vector<bool>> isTarget = std::vector<std::vector<bool>>(presentMap.height, std::vector<bool>(presentMap.width, false));
 
         log << "Turn " << i << std::endl;
 
@@ -203,20 +272,20 @@ int main() {
         for(unsigned short a = 0; a < presentMap.height; a++) {
             for(unsigned short b = 0; b < presentMap.width; b++) {
                 if (presentMap.getSite({ b, a }).owner == myID) {
-                    moveDirList[a][b] = getAttackMoveDir(presentMap, {b, a}, myID);
+                    moveDirList[a][b] = getAttackMoveDir(presentMap, isTarget, {b, a}, myID);
                 }
             }
         }
 
-        // Fill all combo attack moves
-        // TODO: Don't combo attack if attack will happen
-        for(unsigned short a = 0; a < presentMap.height; a++) {
-            for(unsigned short b = 0; b < presentMap.width; b++) {
-                if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
-                    moveDirList[a][b] = getComboAttackMoveDir(presentMap, {b, a}, myID);
-                }
-            }
-        }
+        // // Fill all combo attack moves
+        // // TODO: Don't combo attack if attack will happen
+        // for(unsigned short a = 0; a < presentMap.height; a++) {
+        //     for(unsigned short b = 0; b < presentMap.width; b++) {
+        //         if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
+        //             moveDirList[a][b] = getComboAttackMoveDir(presentMap, {b, a}, myID);
+        //         }
+        //     }
+        // }
 
         // Fill all waiting moves
         for(unsigned short a = 0; a < presentMap.height; a++) {
@@ -236,15 +305,15 @@ int main() {
             }
         }
 
-        // Fill all multi-assist moves
-        // TODO: Don't multi-assist if assist will happen
-        for(unsigned short a = 0; a < presentMap.height; a++) {
-            for(unsigned short b = 0; b < presentMap.width; b++) {
-                if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
-                    // addMultiAssistMove(presentMap, moveDirList, {b, a}, myID);
-                }
-            }
-        }
+        // // Fill all multi-assist moves
+        // // TODO: Don't multi-assist if assist will happen
+        // for(unsigned short a = 0; a < presentMap.height; a++) {
+        //     for(unsigned short b = 0; b < presentMap.width; b++) {
+        //         if (presentMap.getSite({ b, a }).owner == myID && moveDirList[a][b] == INVALID) {
+        //             addMultiAssistMove(presentMap, moveDirList, {b, a}, myID);
+        //         }
+        //     }
+        // }
 
         // Submit moves, using Default moves if a block is not specified
         for(unsigned short a = 0; a < presentMap.height; a++) {

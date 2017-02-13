@@ -6,6 +6,9 @@ nori: Nori_1.0
 clean:
 	rm *.o *.hlt 1-*.log 2-*.log
 
+Nori_5: 
+	$(CC) $(CFLAGS) Nori_5.cpp -o Nori_5.o
+
 Nori_4: 
 	$(CC) $(CFLAGS) Nori_4.cpp -o Nori_4.o
 
